@@ -2,6 +2,7 @@
 #define _BOARDS_H_
 
 #include <vector>
+#include <unordered_map>
 #include <memory>
 
 const int BOARDSIZE = 5;
@@ -40,6 +41,8 @@ enum class BuildingType {
 
 class Cell {
 public:
+    Cell(BuildingType type);
+
     PlayerNum getPlayer() const;
     void setPlayer(PlayerNum new_player);
 
@@ -47,8 +50,11 @@ public:
     size_t getRoadsNum() const;
     std::pair<int, int> getRoad(int i) const;
     std::pair<int, int> getVertex(int i) const;
+    BuildingType getType() const;
 
 protected:
+
+    BuildingType type = BuildingType::NONE;
     PlayerNum player = PlayerNum::NONE;
     std::vector<std::pair<int, int>> vertexes;
     std::vector<std::pair<int, int>> roads;
@@ -88,10 +94,14 @@ private:
 class Player {
 public:
     Player(PlayerNum id);
+
+    void giveResource(Resource re, int num);
+    void getResource(Resource re, int num);
+
 private:
     PlayerNum id;
     int victory_points = 0;
-    std::vector<Resource> resources;
+    std::unordered_map<Resource, int> cards;
     // TODO: std::vector<DevCard>;
 };
 
@@ -100,7 +110,7 @@ public:
     Catan();
 
     void setRobbers(int hex_num);
-    void setSettle(Settlement s, PlayerNum player, int x, int y);
+    void settle(Settlement s, PlayerNum player, int x, int y);
     void setRoad(PlayerNum player, int x, int y);
 
     bool canBuild(BuildingType mod, PlayerNum player, int x, int y) const;
@@ -110,7 +120,8 @@ public:
 private:
     std::vector<std::vector<std::unique_ptr<Cell>>> field;
     std::vector<Hexagon*> hexes;
-    std::vector<std::unique_ptr<Player>> players;
+    std::unordered_map<PlayerNum, std::unique_ptr<Player>> players;
+    int robbers_hex;
     PlayerNum cur_player;
 };
 

@@ -13,10 +13,30 @@ static bool check(int x, int y) {
           ((x < 4 || x > 6) && (y < 2 || y > 18)));
 }
 
-Player::Player(PlayerNum id) : id(id) {}
+Player::Player(PlayerNum id) : id(id) {
+    cards[Resource::WOOL] = 0;
+    cards[Resource::ORE] = 0;
+    cards[Resource::CLAY] = 0;
+    cards[Resource::TREE] = 0;
+    cards[Resource::WHEAT] = 0;
+}
+
+void Player::giveResource(Resource re, int num) {
+    cards[re] += num;
+}
+
+void Player::getResource(Resource re, int num) {
+    cards[re] -= num;
+}
+
+Cell::Cell(BuildingType type) : type(type) {}
 
 PlayerNum Cell::getPlayer() const {
     return player;
+}
+
+BuildingType Cell::getType() const {
+    return type;
 }
 
 void Cell::setPlayer(PlayerNum new_player) {
@@ -39,7 +59,7 @@ std::pair<int, int> Cell::getVertex(int i) const {
     return vertexes[i];
 }
 
-Vertex::Vertex(int x, int y, bool direction) : Cell() {
+Vertex::Vertex(int x, int y, bool direction) : Cell(BuildingType::SETTLEMENT) {
     if (direction) {
         if (!check(x - 2, y)) {
             vertexes.push_back({x - 2, y});
@@ -78,7 +98,7 @@ void Vertex::setSettlement(Settlement new_s) {
     s = new_s;
 }
 
-Road::Road(int x, int y, bool is_horizontal, bool is_even) : Cell() {
+Road::Road(int x, int y, bool is_horizontal, bool is_even) : Cell(BuildingType::ROAD) {
     //тут много кода повторяется, потом поправлю
     if (is_horizontal) {
         //vertexes
@@ -126,7 +146,7 @@ Road::Road(int x, int y, bool is_horizontal, bool is_even) : Cell() {
     }
 }
 
-Hexagon::Hexagon(int x, int y) : Cell() {
+Hexagon::Hexagon(int x, int y) : Cell(BuildingType::NONE) {
     vertexes.push_back({x + 1, y + 2});
     vertexes.push_back({x + 1, y});
     vertexes.push_back({x + 1, y - 2});
@@ -142,7 +162,7 @@ Hexagon::Hexagon(int x, int y) : Cell() {
 }
 
 void Hexagon::setRobbers() {
-    robbers = true;
+    robbers = !robbers;
 }
 
 Resource Hexagon::getResource() const {
@@ -153,7 +173,7 @@ int Hexagon::getNum() const {
     return num;
 }
 
-Catan::Catan() : field(11), players(3) {
+Catan::Catan() : field(11), players(4) {
     srand(time (NULL));
     for (int i = 0; i < 11; ++i) {
         for (int k = 0; k < 21; ++k) {
@@ -161,9 +181,9 @@ Catan::Catan() : field(11), players(3) {
         }
     }
 
-    players[0] = std::unique_ptr<Player>(new Player(PlayerNum::GAMER1));
-    players[1] = std::unique_ptr<Player>(new Player(PlayerNum::GAMER2));
-    players[2] = std::unique_ptr<Player>(new Player(PlayerNum::GAMER3));
+    players[PlayerNum::GAMER1] = std::unique_ptr<Player>(new Player(PlayerNum::GAMER1));
+    players[PlayerNum::GAMER2] = std::unique_ptr<Player>(new Player(PlayerNum::GAMER2));
+    players[PlayerNum::GAMER3] = std::unique_ptr<Player>(new Player(PlayerNum::GAMER3));
     cur_player = PlayerNum::GAMER1;
 
     for (int i = 1; i < 4; i += 2) {
@@ -208,13 +228,8 @@ Catan::Catan() : field(11), players(3) {
         }
     }
 
-    int desert = rand() % (TERRITORIESNUM) + 1;
-    hexes[desert]->setRobbers();
-
-    //debug
-    for (int i = 0; i < 19; i++) {
-        //std::cout << hexes[i]->getNum() << ' ' << hexes[i]->robbers << '\n';
-    }
+    robbers_hex = rand() % (TERRITORIESNUM) + 1;
+    hexes[robbers_hex]->setRobbers();
 
 }
 
@@ -224,8 +239,10 @@ const std::unique_ptr<Cell>& Catan::getFieldCell(int x, int y) const {
 
 bool Catan::canBuild(BuildingType mod, PlayerNum player, int x, int y) const {
     //обсудить с ребятами, не говнокод ли это и вообще ок столько геттеров ради такого делать
-    if (cell(x, y)->getPlayer() != PlayerNum::NONE &&
-        cell(x, y)->getPlayer() != player) {
+    if (cell(x, y) == nullptr ||
+        (cell(x, y)->getPlayer() != PlayerNum::NONE &&
+        cell(x, y)->getPlayer() != player) ||
+        cell(x, y)->getType() != mod) {
         return false;
     }
 
@@ -267,6 +284,32 @@ bool Catan::canBuild(BuildingType mod, PlayerNum player, int x, int y) const {
     return false;
 }
 
+void Catan::setRoad(PlayerNum player, int x, int y) {
+    players[player]->getResource(Resource::TREE, 1);
+    players[player]->getResource(Resource::CLAY, 1);
+    cell(x, y)->setPlayer(player);
+}
+
+void Catan::settle(Settlement s, PlayerNum player, int x, int y) {
+    if (s == Settlement::VILLAGE) {
+        players[player]->getResource(Resource::TREE, 1);
+        players[player]->getResource(Resource::CLAY, 1);
+        players[player]->getResource(Resource::WOOL, 1);
+        players[player]->getResource(Resource::WHEAT, 1);
+    } else {
+        players[player]->getResource(Resource::ORE, 3);
+        players[player]->getResource(Resource::WHEAT, 2);
+    }
+    cell(x, y)->setPlayer(player);
+    Vertex* v = static_cast<Vertex*>(cell(x, y).get());
+    v->setSettlement(s);
+}
+
+void Catan::setRobbers(int hex_num) {
+    hexes[robbers_hex]->setRobbers();
+    hexes[hex_num]->setRobbers();
+    robbers_hex = hex_num;
+}
 
 
 //обсудить также предстоящие статик касты или виртуальные мутки, опять же получается говнокод какой-то либо я себя накручиваю
