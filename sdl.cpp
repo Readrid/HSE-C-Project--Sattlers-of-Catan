@@ -192,6 +192,8 @@ int main (int argc, char ** args) {
 
 	// Флаг выхода
 	bool quit = false;
+    // Отображение сцены
+    SDL_RenderPresent(ren); //Погнали!!
 	while (!quit)
 	{
 		// Обработка событий
@@ -207,6 +209,8 @@ int main (int argc, char ** args) {
 			}*/
 			if (e.type == SDL_MOUSEBUTTONDOWN)
 			{
+                // Отображение сцены
+                SDL_RenderPresent(ren); //Погнали!!
 		        int x, y;
 		        SDL_GetMouseState(&x, &y); // Получить координаты мыши
 		        std::cout << x << ' ' << y << '\n';
@@ -262,11 +266,7 @@ int main (int argc, char ** args) {
 
 	     	}
 		}
-		
-		
 
-		// Отображение сцены
-		SDL_RenderPresent(ren); //Погнали!!
 
 	}
 
