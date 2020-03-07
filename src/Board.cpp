@@ -172,11 +172,12 @@ Catan::Catan() : field(11), players(3) {
                 field[i][j] = std::unique_ptr<Road>(new Road(i, j, false, false));
                 field[10 - i][j] = std::unique_ptr<Road>(new Road(10 - i, j, false, false));
             } else if (j % 2 == 0) {
-                field[i][j] = std::unique_ptr<Hexagon>(new Hexagon(i, j));
-                field[10 - i][j] = std::unique_ptr<Hexagon>(new Hexagon(10 - i, j));
-            } else {
-                field[i][j] = nullptr;
-                field[10 - i][j] = nullptr;
+                Hexagon* hex_ptr1 = new Hexagon(i, j);
+                Hexagon* hex_ptr2 = new Hexagon(10 - i, j);
+                hexes.push_back(hex_ptr1);
+                field[i][j] = std::unique_ptr<Hexagon>(hex_ptr1);
+                hexes.push_back(hex_ptr2);
+                field[10 - i][j] = std::unique_ptr<Hexagon>(hex_ptr2);
             }
         }
     }
@@ -199,15 +200,21 @@ Catan::Catan() : field(11), players(3) {
         if (j % 4 == 0) {
             field[5][j] = std::unique_ptr<Road>(new Road(5, j, false, false));
         } else if (j % 2 == 0) {
-            field[5][j] = std::unique_ptr<Hexagon>(new Hexagon(5, j));
+            Hexagon* hex_ptr = new Hexagon(5, j);
+            hexes.push_back(hex_ptr);
+            field[5][j] = std::unique_ptr<Hexagon>(hex_ptr);
         } else {
             field[5][j] = nullptr;
         }
     }
 
-    //говнокод + нужен рандом
-    Hexagon* desert = static_cast<Hexagon*>(field[5][10].get());
-    desert->setRobbers();
+    int desert = rand() % (TERRITORIESNUM) + 1;
+    hexes[desert]->setRobbers();
+
+    //debug
+    for (int i = 0; i < 19; i++) {
+        //std::cout << hexes[i]->getNum() << ' ' << hexes[i]->robbers << '\n';
+    }
 
 }
 
@@ -259,5 +266,7 @@ bool Catan::canBuild(BuildingType mod, PlayerNum player, int x, int y) const {
 
     return false;
 }
+
+
 
 //обсудить также предстоящие статик касты или виртуальные мутки, опять же получается говнокод какой-то либо я себя накручиваю

@@ -109,6 +109,7 @@ public:
 
 private:
     std::vector<std::vector<std::unique_ptr<Cell>>> field;
+    std::vector<Hexagon*> hexes;
     std::vector<std::unique_ptr<Player>> players;
     PlayerNum cur_player;
 };
