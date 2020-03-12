@@ -108,12 +108,14 @@ public:
     void setRobbers(int hex_num);
     void settle(BuildingType s, PlayerNum player, int x, int y);
     void giveResources(int cubes_num);
-    // TODO: void trade(...);
+    //возвращает true, если торговля прошла успешно, false, если не хватило ресурсов на обмен
+    bool trade(Resource re_for_trade, Resource need_re);
 
     bool canBuild(BuildingType mod, PlayerNum player, int x, int y) const;
     bool checkCards(BuildingType building);
 
     const std::unique_ptr<Cell>& getFieldCell(int x, int y) const;
+    void changeCurPlayer(PlayerNum new_player);
 
     bool isFinished();
 

@@ -5,7 +5,7 @@
 #include "Board.h"
 
 #define cell(x, y) field[x][y]
-#define getPlayerCardNum(card) players[cur_player]->checkResourceNum(Resource::card)
+#define getPlayerCardNum(card) players[cur_player]->checkResourceNum(card)
 
 static bool check(int x, int y) {
     return (x < 0 || y < 0 || x >= 11 || y >= 21  ||
@@ -297,13 +297,13 @@ bool Catan::canBuild(BuildingType mod, PlayerNum player, int x, int y) const {
 
 bool Catan::checkCards(BuildingType building) {
     if (building == BuildingType::VILLAGE) {
-        return (getPlayerCardNum(TREE) > 0 && getPlayerCardNum(CLAY) > 0 &&
-                getPlayerCardNum(WOOL) > 0 && getPlayerCardNum(WHEAT) > 0);
+        return (getPlayerCardNum(Resource::TREE) > 0 && getPlayerCardNum(Resource::CLAY) > 0 &&
+                getPlayerCardNum(Resource::WOOL) > 0 && getPlayerCardNum(Resource::WHEAT) > 0);
     }
     if (building == BuildingType::CITY) {
-        return (getPlayerCardNum(ORE) >= 3 && getPlayerCardNum(WHEAT) >= 2);
+        return (getPlayerCardNum(Resource::ORE) >= 3 && getPlayerCardNum(Resource::WHEAT) >= 2);
     }
-    return (getPlayerCardNum(TREE) > 0 && getPlayerCardNum(CLAY) > 0);
+    return (getPlayerCardNum(Resource::TREE) > 0 && getPlayerCardNum(Resource::CLAY) > 0);
 }
 
 void Catan::settle(BuildingType s, PlayerNum player, int x, int y) {
@@ -330,6 +330,10 @@ void Catan::setRobbers(int hex_num) {
     robbers_hex = hex_num;
 }
 
+void Catan::changeCurPlayer(PlayerNum new_player) {
+    cur_player = new_player;
+}
+
 void Catan::giveResources(int cubes_num) {
     for (auto h : hexes) {
         if (h->getNum() == cubes_num && !h->robbersIsHere()) {
@@ -346,6 +350,15 @@ void Catan::giveResources(int cubes_num) {
         }
     }
 }
+
+bool Catan::trade(Resource re_for_trade, Resource need_re) {
+    if (getPlayerCardNum(re_for_trade) < 4) {
+        return false;
+    }
+    players[cur_player]->getResource(re_for_trade, 4);
+    players[cur_player]->giveResource(need_re, 1);
+    return true;
+};
 
 bool Catan::isFinished() {
     return (players[PlayerNum::GAMER1]->getVictoryPoints() == 10 ||
