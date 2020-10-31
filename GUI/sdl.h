@@ -9,6 +9,7 @@
 #include <time.h>
 #include <mutex>
 #include <atomic>
+#include <spinlock.h>
 
 #include "game.pb.h"
 
@@ -21,7 +22,7 @@ public:
     void storeStartTime();
     void delay();
 private:
-    const int FPS = 60;
+    const int FPS = 30;
     const int frameDelay = 1000 / FPS;
     uint32_t frameStart = 0;
     int frameTime = 0;
@@ -33,6 +34,7 @@ private:
 class GUI;
 void upgrade(GUI* g);
 void playMusic(GUI* gui);
+void setTimeTable(GUI *gui);
 
 enum Colour {
     RED,
@@ -85,11 +87,11 @@ public:
             gui_y2(y2), model_x(x), model_y(y),
             colour(_colour), dest(_dest), type(_type){};
 
-    double gui_x1, gui_y1, gui_x2, gui_y2;
+    double gui_x1, gui_x2, gui_y1, gui_y2;
     int model_x, model_y;
-    SDL_Rect dest;
     int built = 0;
     Colour colour;
+    SDL_Rect dest;
     int type = 0;
     bool is(int x, int y) const;
     std::pair<int, int> get_model_coors();
@@ -97,15 +99,66 @@ public:
 
 class Building_arr {
 public:
-    explicit Building_arr(GUI& gui);
+    Building_arr();
     ~Building_arr();
     std::vector<Obj> vec;
 };
 
 class Road_arr {
 public:
-    explicit Road_arr(GUI& gui);
+    Road_arr();
     ~Road_arr();
+    std::vector<Obj> vec;
+};
+
+class Stage {
+public:
+
+private:
+
+};
+
+class Robber_arr {
+public:
+    Robber_arr(GUI &gui);
+    ~Robber_arr();
+    std::vector<std::pair<int, int>> vec;
+    std::pair<int, int> get_coors(int type, GUI &gui);
+    SDL_Texture *texture_oct = nullptr;
+    SDL_Texture *texture_robber = nullptr;
+    void render(GUI &gui);
+    std::atomic<int> x_tmp;
+    std::atomic<int> y_tmp;
+    std::atomic<int> x_r;
+    std::atomic<int> y_r;
+    int number;
+    void set (int x);
+};
+
+class Image {
+public:
+    explicit Image(std::string s, SDL_Renderer *ren);
+    explicit Image(std::string s, int x, int y, int w, int h, SDL_Renderer *ren);
+    explicit Image(std::string s, SDL_Rect _dest, SDL_Renderer *ren);
+    ~Image();
+    void render(SDL_Renderer *ren, SDL_Rect _dest);
+    void render(SDL_Renderer *ren);
+private:
+    SDL_Texture *texture{};
+    SDL_Rect dest{};
+};
+
+class ImageArr {
+public:
+
+private:
+    std::vector<Image> vec;
+};
+
+class Resourses_arr {
+public:
+    Resourses_arr();
+    ~Resourses_arr();
     std::vector<Obj> vec;
 };
 
@@ -113,7 +166,7 @@ class Inscription {
 public:
     SDL_Rect dest;
     SDL_Texture *texture;
-    explicit Inscription(GUI& gui, int _x, int _y,const std::string &s);
+    Inscription(GUI& gui, int _x, int _y, const std::string &s);
     Inscription() = default;
 };
 
@@ -122,23 +175,27 @@ class GUI {
 public:
     GUI(int player, int numberOfPlayers);
     ~GUI();
-    std::mutex mutex_for_roads {};  
-    std::mutex mutex_for_buildings {};
-    std::mutex mutex_for_table {};
+    mutable utility::spinlock mutex_for_render {};
 
+    void setTable(int i);
+
+    void renderCurPlayer();
+
+    Robber_arr *robber = nullptr;
     Road_arr *roads = nullptr;
     Building_arr *buildings = nullptr;
-    std::pair<int, int> tmp_road;
+    std::pair<std::atomic<int>, std::atomic<int>> tmp_road;
 
-    Mix_Chunk *sfx, *button_sound, *build_sound;
+    Mix_Chunk *sfx, *button_sound, *build_sound, *dice_sound;
     std::pair<SDL_Texture*, int> cur_table;
     SDL_Texture *back, *back_ground, *oct, *cur_road, *cur_road1,
-            *cur_road2, *table, *table_1, *table_2,
+            *cur_road2, *table, *table_1, *table_2, *cur_card_texture,
             *table_time, *house_cur, *house1_cur, *svitok;
+    std::vector<SDL_Texture *> message;
+    std::atomic<int> table_time_type;
     SDL_Texture* arr[6];
     SDL_Texture* build_texture_arr[3];
     SDL_Texture* cur_build_texture_arr[3];
-
     std::vector<SDL_Texture *> texture_arr_building[3];
     std::vector<SDL_Texture *> cur_texture_arr_building;
 
@@ -147,6 +204,12 @@ public:
 
     std::vector<SDL_Texture *> dice;
     std::vector<SDL_Texture *> tables_arr;
+
+    SDL_Texture * cur_texture_resourse;
+    std::vector<SDL_Texture *> texture_arr_resourses;
+    SDL_Texture * texture_resourse_built;
+    void updateDevCards (std::vector<bool> vec);
+    std::vector<bool> dev_cards_vec = {0, 0, 0, 0, 0};
 
     void renderBeginingMenu();
 
@@ -158,33 +221,38 @@ public:
 
     int getGameId();
 
+    std::atomic<int> tmp_card;
+    std::atomic<int> cur_card;
+
+
+
     std::atomic<bool> quit { false };
     int  end_time_dice = 0;
     std::vector<SDL_Texture *> field_arr;
     int tmp_sound = 0;
-    int render_type;
+    std::atomic<int> render_type;
     SDL_Renderer *ren;
     SDL_DisplayMode displayMode{};
     SDL_Window *win;
     void loadTextures(utility::Random& random, GUI& gui);
 
-    int tmp_coors{};
+    std::atomic<int> tmp_coors { 0 };
 
-    int dice1 = 0;
-    int dice2 = 0;
+    std::atomic<int> dice1 { 0 };
+    std::atomic<int> dice2 { 0 };
 
     SDL_Texture *ppp;
-    
+
 
     SDL_Color color = { 243, 195, 79, 255 };
     SDL_Color color_const_table = { 79, 51, 14, 255 };
     SDL_Texture* Text(const std::string &message);
-    SDL_Surface *svitok_up, *svitok_down;
-    SDL_Surface *svitok_up1, *svitok_down1;
+    SDL_Texture* back_resourse;
     SDL_Texture *texture_svitok_up, *texture_svitok_down;
     SDL_Texture *dice_shadow;
     std::vector<SDL_Texture *> table_shadow;
-    void makeTextureConstTable(std::vector<int> vec, SDL_Surface& x, SDL_Texture *&ans, int type);
+    std::vector<SDL_Texture *> texture_arr_card;
+    void makeTextureConstTable(std::vector<int>& vec, SDL_Surface* buff, SDL_Texture *&ans, int type);
     void destroyTextures();
     void renderBackground() const;
     void renderTables() const;
@@ -194,35 +262,38 @@ public:
     void renderDice();
     void addDice(int x, int y);
     void renderTablesTime() const;
-    void makeRender();
+    void makeRender(GUI &gui);
     void getCoorsRoad();
     void getCoorsBuilding();
+    void getCoorsCard();
+    void setRobber(int x);
 
-    Inscription _build_road, _build, _settlement, _end_turn, _go_back,
-                 _roll_the_dice, _play_a_card,_local_game, _game_on_server, 
-                 _start_new_game, _join_game, _exit, _2_Players, _3_Players,
-                _4_Players, _type_game_id;
+    Inscription _build_road, _build, _settlement, _end_turn, _go_back, _go_back2, _go_back3,
+                 _roll_the_dice, _play_a_card,_local_game, _game_on_server, _ok,
+                 _start_new_game, _join_game, _exit, _2_Players, _3_Players, _buy_card,
+                _4_Players, _type_game_id, _exchange, _resources, _next_phase;
 
     ::game::Event FirstStage();
     ::game::Event ThirdStage();
+    ::game::Event SecondStage ();
 
     ::game::Event getEvent();
 
     void addRoad(std::pair<int, int> tmp, int player);
-
     void addBuilding(std::pair<int, int> tmp, int player);
-
+    void renderCards();
     int returnRoad(int x, int y) const;
+
+    int getCoorsResoursesCards();
 
     int returnBuilding(int x, int y) const;
 
-    std::pair<int, int> tmp_building;
+    int returnResourses(int x, int y) const;
 
-    SDL_Texture *getBuilding(int i, int type);
+    std::pair<std::atomic<int>, std::atomic<int>> tmp_building;
+    std::pair<std::atomic<int>, std::atomic<int>> tmp_resours;
 
-    SDL_Texture *getRoad(int x, int type);
-
-    SDL_Texture *getVertRoad(int type);
+    Resourses_arr *resourses_img = nullptr;
 
     std::vector<int> players_points;
     std::vector<std::string> players_names;
@@ -233,7 +304,7 @@ public:
     void renderText() const;
 
     int num_players = 4;
-
+    int my_player;
     void updatePoints(std::vector<int> vec);
 
     void updateResourses(std::vector<int> vec);
@@ -241,6 +312,16 @@ public:
 
     void renderConstTable();
     void addPlayerName(int x, std::string s);
+
+    int getCoorsRobber(GUI &gui);
+
+    void getCoorsResourses();
+
+
+    void renderResourses() const;
+
+    std::pair<int, int> tmp_resourses;
+    std::pair<int, int> tmp_resourses_num;
 
 };
 

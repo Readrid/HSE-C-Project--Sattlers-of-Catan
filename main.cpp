@@ -72,12 +72,16 @@ int main() {
 
     GUI::GUI view(info.id(), info.numberofplayers());
     Board::Catan wow(random, info.numberofplayers());
-
+    view.robber = new GUI::Robber_arr(view);
     view.loadTextures(random, view);
-    view.roads = new GUI::Road_arr(view);
-    view.buildings = new GUI::Building_arr(view);
+    view.roads = new GUI::Road_arr();
+    
+    view.buildings = new GUI::Building_arr();
+    view.resourses_img = new GUI::Resourses_arr();
 
     std::thread update(GUI::upgrade, &view);
+
+    std::thread TimeTable(GUI::setTimeTable, &view);
 
     Controller::GameController gc(wow, gameClient_, view, random, info);
 
@@ -87,6 +91,7 @@ int main() {
 
     music.join();
     update.join();
+    TimeTable.join();
 
     localServer.terminate();
     server.join();

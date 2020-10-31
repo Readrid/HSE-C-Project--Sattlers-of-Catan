@@ -19,9 +19,7 @@ using game::Market;
 using game::Build;
 using game::Player;
 using game::Network;
- 
- 
- 
+
 namespace {
  
 bool roadIsSet = false;
@@ -46,22 +44,66 @@ void CardHandler::processEvent(Event& event, bool needSend) {
     if (event.type() != EventType::CARD) {
         throw std::logic_error("Wrong type");
     }
- 
-    currentPlayer_ = event.playerid();
+
+    int Player = event.playerid() + 1;
+    auto currentPlayer_ = static_cast<Board::PlayerNum>(Player);
+    gameModel_.changeCurPlayer(currentPlayer_);
+
     cardType_ = event.cardinfo().cardtype();
-    /*
-    if (gameModel_.hasCard(currentPlayer_, cardType_)) {
-        gameModel_.playCard(currentPlayer_, cardType_);
+    auto modelCardType = static_cast<Board::DevelopmentCard>(cardType_);
+
+    auto cards = gameModel_.getPlayerDevCards(currentPlayer_);
+
+    if (cards[modelCardType] > 0) {
+        if (Player - 1 == myTurn_) {
+            event.mutable_cardinfo()->set_extradata(0);
+            if (modelCardType == Board::DevelopmentCard::KNIGHT) {
+                int hexNum = gameView_.getCoorsRobber(gameView_);
+                gameView_.setRobber(hexNum);
+                event.mutable_cardinfo()->set_extradata(hexNum);
+            } else if (modelCardType == Board::DevelopmentCard::MONOPOLY) {
+                int resource = gameView_.getCoorsResoursesCards();
+                event.mutable_cardinfo()->set_extradata(resource + 1);
+            } else {
+                event.mutable_cardinfo()->set_extradata(0);
+            }
+        }
+
+        int extraData = event.mutable_cardinfo()->extradata();
+        gameModel_.playDevCard(modelCardType, extraData);
+
         displayEvent(event);
-        sendEvent(event);
+        if (needSend) {
+            sendEvent(event);
+        }
     } else {
-        Возможно сообщить игроку о том, что у него нет карты, но лучше просто не допустить такого.
+        //Возможно сообщить игроку о том, что у него нет карты, но лучше просто не допустить такого.
     }
-    */
+
 }
  
 void CardHandler::displayEvent(Event& event) {
-    // TODO
+    int Player = event.playerid();
+    auto currentPlayer_ = static_cast<Board::PlayerNum>(Player + 1);
+    gameView_.updatePoints(gameModel_.Catan::getVictoryPoints());
+    if (Player == myTurn_) {
+        std::vector<int> v;
+        auto m = gameModel_.getPlayerResources(static_cast<Board::PlayerNum>(Player + 1));
+        v.push_back(m[Board::Resource::WOOL]);
+        v.push_back(m[Board::Resource::ORE]);
+        v.push_back(m[Board::Resource::CLAY]);
+        v.push_back(m[Board::Resource::TREE]);
+        v.push_back(m[Board::Resource::WHEAT]);
+        gameView_.updateResourses(v);
+    } // TODO: убрать if
+    auto m = gameModel_.getPlayerDevCards(currentPlayer_);
+    std::vector<bool> cards;
+    cards.push_back(m[Board::DevelopmentCard::KNIGHT] != 0);
+    cards.push_back(m[Board::DevelopmentCard::VICTORY_POINT] != 0);
+    cards.push_back(m[Board::DevelopmentCard::ROAD_BUILDING] != 0);
+    cards.push_back(m[Board::DevelopmentCard::MONOPOLY] != 0);
+    cards.push_back(m[Board::DevelopmentCard::INVENTION] != 0);
+    gameView_.updateDevCards(cards);
 }
  
  
@@ -81,7 +123,7 @@ void DiceHandler::processEvent(Event& event, bool needSend) {
     number1_ = diceInfo->number1();
     number2_ = diceInfo->number2();
 
-    if (number1_ == 0) {
+    if (Player - 1 == myTurn_) {
         number1_ = random_.getRandomNumberFromTo(1, 6);
         number2_ = random_.getRandomNumberFromTo(1, 6);
         diceInfo->set_number1(number1_);
@@ -89,16 +131,18 @@ void DiceHandler::processEvent(Event& event, bool needSend) {
     }
  
     int numberSum = number1_ + number2_;
- 
-    if (numberSum <= 0 || numberSum > 12) {
-        throw std::logic_error("Wrong dice number");
-    }
- 
+
     if (numberSum == 7) {
+        gameView_.addDice(number1_, number2_);
         int hexNum = 0;
-        // hexNum = запросить у View
-        //gameModel_.setRobbers(hexNum);
-        // изменить hexNum у View
+        if (Player - 1 == myTurn_) {
+            hexNum = gameView_.getCoorsRobber(gameView_);
+            diceInfo->set_hexnumber(hexNum);
+        } else {
+            hexNum = diceInfo->hexnumber();
+        }
+        gameView_.setRobber(hexNum);
+        gameModel_.setRobbers(hexNum);
     } else {
         gameModel_.giveResources(numberSum);
     }
@@ -111,18 +155,16 @@ void DiceHandler::processEvent(Event& event, bool needSend) {
 }
  
 void DiceHandler::displayEvent(Event& event) {
+    static_cast<void>(event);
     gameView_.addDice(number1_, number2_);
-    int Player = event.playerid();
-    if (Player == gameView_.cur_player) {
-        std::vector<int> v;
-        const std::unordered_map<Board::Resource, int> m = gameModel_.getPlayerResources(static_cast<Board::PlayerNum>(Player + 1));
-        for(auto e: m) {
-            std::cout << e.second << std::endl;
-            v.push_back(e.second);
-        }
-        std::cout << v.size() << std::endl;
-        gameView_.updateResourses(v);
-    }
+    std::vector<int> v;
+    auto m = gameModel_.getPlayerResources(static_cast<Board::PlayerNum>(myTurn_ + 1));
+    v.push_back(m[Board::Resource::WOOL]);
+    v.push_back(m[Board::Resource::ORE]);
+    v.push_back(m[Board::Resource::CLAY]);
+    v.push_back(m[Board::Resource::TREE]);
+    v.push_back(m[Board::Resource::WHEAT]);
+    gameView_.updateResourses(v);
 }
  
  
@@ -142,25 +184,36 @@ void MarketHandler::processEvent(Event& event, bool needSend) {
  
     gameModel_.changeCurPlayer(currentPlayer_);
  
-    auto reTo = static_cast<Board::Resource>(requiredResource_);
-    auto reFrom = static_cast<Board::Resource>(ownedResource_);
+    auto reTo = static_cast<Board::Resource>(++requiredResource_);
+    auto reFrom = static_cast<Board::Resource>(++ownedResource_);
+    std::cout << "requiredResource " << requiredResource_ << std::endl;
+    std::cout << "ownedResource " << ownedResource_ << std::endl;
    
     if (gameModel_.trade(reFrom, reTo)) {
-        displayEvent(event);
         if (needSend) {
             sendEvent(event);
         }
     } else {
-        // сказать о том, что не достаточно ресурсов
+        gameView_.setTable(2);
     }
- 
- 
+
+    displayEvent(event);
+
 }
  
 void MarketHandler::displayEvent(Event& event) {
-    /*
-    Вывести изменения ресурсов
-    */
+    // TODO: можно вывести сообщение о том, что обмен невозможен
+    int Player = event.playerid();
+    if (Player == myTurn_) {
+        std::vector<int> v;
+        auto m = gameModel_.getPlayerResources(static_cast<Board::PlayerNum>(Player + 1));
+        v.push_back(m[Board::Resource::WOOL]);
+        v.push_back(m[Board::Resource::ORE]);
+        v.push_back(m[Board::Resource::CLAY]);
+        v.push_back(m[Board::Resource::TREE]);
+        v.push_back(m[Board::Resource::WHEAT]);
+        gameView_.updateResourses(v);
+    } // TODO: можно вывести сообщение о том, что такой-то игрок поменял такой-то ресурс на такой-то
 }
  
  
@@ -182,13 +235,28 @@ void BuildHandler::processEvent(Event& event, bool needSend) {
     y_ = event.mutable_buildinfo()->y();
  
     auto type = static_cast<Board::BuildingType>(buildingType_);
-    std::cout << x_ << ' ' << y_ << ' ' << static_cast<int>(Board::BuildingType::ROAD) << '\n';
-    if (gameModel_.checkCards(type) && gameModel_.canBuild(type, x_, y_)) {
-        std::cout << "YES" << '\n';
-        gameModel_.settle(type, x_, y_);
-        displayEvent(event);
-        if (needSend) {
-            sendEvent(event);
+
+    if (type == Board::BuildingType::DevCard) {
+        std::cout << "Card" << std::endl << std::endl;
+        if (gameModel_.buildDevCard() != Board::DevelopmentCard::NONE) {
+            displayEvent(event);
+            if (needSend) {
+                sendEvent(event);
+            }
+        } else {
+            gameView_.setTable(2);
+        }
+    } else {
+        if (gameModel_.checkCards(type) && gameModel_.canBuild(type, x_, y_)) {
+            gameModel_.settle(type, x_, y_);
+            displayEvent(event);
+            if (needSend) {
+                sendEvent(event);
+            }
+        } else if (!gameModel_.checkCards(type)) {
+            gameView_.setTable(2);
+        } else if (!gameModel_.canBuild(type, x_, y_)){
+            gameView_.setTable(0);
         }
     }
 }
@@ -208,17 +276,28 @@ void BuildHandler::displayEvent(Event& event) {
         gameView_.addBuilding({x_, y_}, Player);
     }
     gameView_.updatePoints(gameModel_.Catan::getVictoryPoints());
-    if (Player == gameView_.cur_player) {
+    if (Player == myTurn_) {
         std::vector<int> v;
-        const std::unordered_map<Board::Resource, int> m = gameModel_.getPlayerResources(static_cast<Board::PlayerNum>(Player + 1));
-        std::cout << "Player " << Player << "resources" << std::endl;
-        for(auto e: m) {
-            std::cout << e.second << std::endl;
-            v.push_back(e.second);
-        }
-        std::cout << v.size() << std::endl;
+        auto m = gameModel_.getPlayerResources(static_cast<Board::PlayerNum>(Player + 1));
+        v.push_back(m[Board::Resource::WOOL]);
+        v.push_back(m[Board::Resource::ORE]);
+        v.push_back(m[Board::Resource::CLAY]);
+        v.push_back(m[Board::Resource::TREE]);
+        v.push_back(m[Board::Resource::WHEAT]);
         gameView_.updateResourses(v);
+
+
+        auto m1 = gameModel_.getPlayerDevCards(static_cast<Board::PlayerNum>(Player + 1));
+        std::vector<bool> cards;
+        cards.push_back(m1[Board::DevelopmentCard::KNIGHT] != 0);
+        cards.push_back(m1[Board::DevelopmentCard::VICTORY_POINT] != 0);
+
+        cards.push_back(m1[Board::DevelopmentCard::ROAD_BUILDING] != 0);
+        cards.push_back(m1[Board::DevelopmentCard::MONOPOLY] != 0);
+        cards.push_back(m1[Board::DevelopmentCard::INVENTION] != 0);
+        gameView_.updateDevCards(cards);
     }
+
 }
  
  
@@ -236,9 +315,8 @@ void EndTurnHandler::processEvent(Event& event, bool needSend) {
 }
  
 void EndTurnHandler::displayEvent(Event& event) {
-    /*
-    Убрать некоторый интерфейс
-    */
+    // TODO: желательно вывести пустой интерфейс
+    static_cast<void>(event);
 }
  
  
@@ -246,6 +324,7 @@ void EndTurnHandler::displayEvent(Event& event) {
 //===============NextPhaseHandler===============
  
 void NextPhaseHandler::processEvent(Event& event, bool needSend) {
+    static_cast<void>(needSend);
     if (event.type() != EventType::NEXTPHASE) {
         throw std::logic_error("Wrong type");
     }
@@ -253,10 +332,7 @@ void NextPhaseHandler::processEvent(Event& event, bool needSend) {
 }
  
 void NextPhaseHandler::displayEvent(Event& event) {
-    //gameView_.update();
-    /*
-    Отобразить новые кнопки
-    */
+    static_cast<void>(event);
 }
  
  
@@ -275,6 +351,7 @@ void EndGameHandler::processEvent(Event& event, bool needSend) {
  
 void EndGameHandler::displayEvent(Event& event) {
     gameView_.quit.store(true);
+    static_cast<void>(event);
 }
  
  
@@ -293,10 +370,10 @@ GameController::GameController(Board::Catan& model, GameClient& client, GUI::GUI
     for (int k = 0; k < 7; ++k) {
         handlers_.push_back(nullptr);
     }
-    handlers_[0] = std::make_unique<CardHandler     >(gameModel_, gameView_, gameClient_);
-    handlers_[1] = std::make_unique<DiceHandler     >(gameModel_, gameView_, gameClient_, ran);
-    handlers_[2] = std::make_unique<MarketHandler   >(gameModel_, gameView_, gameClient_);
-    handlers_[3] = std::make_unique<BuildHandler    >(gameModel_, gameView_, gameClient_);
+    handlers_[0] = std::make_unique<CardHandler     >(gameModel_, gameView_, gameClient_, myTurn_);
+    handlers_[1] = std::make_unique<DiceHandler     >(gameModel_, gameView_, gameClient_, ran, myTurn_);
+    handlers_[2] = std::make_unique<MarketHandler   >(gameModel_, gameView_, gameClient_, myTurn_);
+    handlers_[3] = std::make_unique<BuildHandler    >(gameModel_, gameView_, gameClient_, myTurn_);
     handlers_[4] = std::make_unique<EndTurnHandler  >(gameModel_, gameView_, gameClient_);
     handlers_[5] = std::make_unique<NextPhaseHandler>(gameModel_, gameView_, gameClient_);
     handlers_[6] = std::make_unique<EndGameHandler  >(gameModel_, gameView_, gameClient_);
@@ -305,9 +382,15 @@ GameController::GameController(Board::Catan& model, GameClient& client, GUI::GUI
  
 void GameController::RunGame() {
     std::cout << myTurn_ << std::endl;
+    if (BeginGame()) {
+        return;
+    }
 
+    gameModel_.gotoNextGamePhase();
     bool quit = false;
     while (!quit) {
+        gameView_.updatePlayer(currentTurn_);
+
         if (currentTurn_ == myTurn_) {
             while (true) {
                 Event event = gameView_.getEvent();
@@ -315,6 +398,7 @@ void GameController::RunGame() {
                 event.set_playerid(myTurn_);
                 handlers_[x]->processEvent(event, true);
                 if (gameModel_.isFinished()) {
+                    // TODO: вывести победителя
                     Event end;
                     end.set_type(EventType::ENDGAME);
                     gameClient_.SendEvent(end);
@@ -340,6 +424,7 @@ void GameController::RunGame() {
                 int x = event.type();
                 handlers_[x]->processEvent(event, false);
                 if (gameModel_.isFinished()) {
+                    // TODO: вывести победителя
                     gameView_.quit.store(true);
                     quit = true;
                     break;
@@ -356,32 +441,49 @@ void GameController::RunGame() {
         currentTurn_ %= numberOfPlayers_;
     }
 }
- 
- 
-void GameController::BeginGame() {
+
+
+bool GameController::BeginGame() {
     for (int turn = 0; turn < numberOfPlayers_ * 2; ++turn) {
         if (turn >= numberOfPlayers_) {
             currentTurn_ = 2 * numberOfPlayers_ - turn - 1;
         } else {
             currentTurn_ = turn;
         }
- 
+        gameView_.updatePlayer(currentTurn_);
+        roadIsSet = false;
+        villageIsSet = false;
         if (currentTurn_ == myTurn_) {
             while (true) {
                 Event event = gameView_.ThirdStage();
                 int x = event.type();
+                event.set_playerid(myTurn_);
                 if (x == EventType::BUILD) {
-                    handlers_[x]->processEvent(event, true);
+                    auto type = static_cast<Board::BuildingType>(event.mutable_buildinfo()->buildingtype());
+                    if (type == Board::BuildingType::ROAD) {
+                        if (!roadIsSet) {
+                            handlers_[x]->processEvent(event, true);
+                        } else {
+                            gameView_.setTable(0);
+                        }
+                    }
+                    if (type == Board::BuildingType::VILLAGE) {
+                        if (!villageIsSet) {
+                            handlers_[x]->processEvent(event, true);
+                        } else {
+                            gameView_.setTable(0);
+                        }
+                    }
                 } else if (x == EventType::ENDTURN) {
                     if (roadIsSet && villageIsSet) {
-                        roadIsSet = false;
-                        villageIsSet = false;
                         handlers_[x]->processEvent(event, true);
                         break;
+                    } else {
+                        gameView_.setTable(3);
                     }
                 } else if (x == EventType::ENDGAME) {
                     handlers_[x]->processEvent(event, true);
-                    break;
+                    return true;
                 }
             }
         } else {
@@ -396,17 +498,16 @@ void GameController::BeginGame() {
                 if (x == EventType::BUILD) {
                     handlers_[x]->processEvent(event, false);
                 } else if (x == EventType::ENDTURN) {
-                    if (roadIsSet && villageIsSet) {
-                        handlers_[x]->processEvent(event, false);
-                        break;
-                    }
-                } else if (x == EventType::ENDGAME) {
                     handlers_[x]->processEvent(event, false);
                     break;
+                } else if (x == EventType::ENDGAME) {
+                    handlers_[x]->processEvent(event, false);
+                    return true;
                 }
             }
         }
     }
+    return false;
 }
  
  
