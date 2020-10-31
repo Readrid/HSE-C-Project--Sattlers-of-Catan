@@ -65,30 +65,33 @@ int main() {
     LocalServer localServer;
     std::thread server(RunServer, &localServer, isLocal);
 
-    utility::Random random;
-
-    GUI::GUI view;
     GameClient gameClient_(isLocal);
-    //TODO: добавить поддержку количества игроков, пока работает только для action == 1, т.е. для новой игры
-    Board::Catan wow(random, gameParams.second);
 
-    view.load_textures();
-    view.roads = new GUI::Road_arr(view);
-    view.buildings = new GUI::Building_arr(view);
+    OrderInfo info = gameClient_.ConnectToGame(gameParams.first, gameParams.second);
+    utility::Random random(info.seed());
+
+    GUI::GUI view(info.id(), info.numberofplayers());
+    Board::Catan wow(random, info.numberofplayers());
+    view.robber = new GUI::Robber_arr(view);
+    view.loadTextures(random, view);
+    view.roads = new GUI::Road_arr();
+    
+    view.buildings = new GUI::Building_arr();
+    view.resourses_img = new GUI::Resourses_arr();
 
     std::thread update(GUI::upgrade, &view);
 
-    Controller::GameController gc(wow, gameClient_, view, random);
+    std::thread TimeTable(GUI::setTimeTable, &view);
 
-    if (!gc.ConnectToGame(gameParams.first, gameParams.second)) {
-        return 0;
-    }
-    std::thread music(GUI::play_music, &view);
+    Controller::GameController gc(wow, gameClient_, view, random, info);
+
+    std::thread music(GUI::playMusic, &view);
 
     gc.RunGame();
 
     music.join();
     update.join();
+    TimeTable.join();
 
     localServer.terminate();
     server.join();

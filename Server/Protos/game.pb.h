@@ -745,6 +745,7 @@ class OrderInfo :
     kIdFieldNumber = 1,
     kNumberOfPlayersFieldNumber = 2,
     kGameIdFieldNumber = 3,
+    kSeedFieldNumber = 4,
   };
   // int32 id = 1;
   void clear_id();
@@ -773,6 +774,15 @@ class OrderInfo :
   void _internal_set_gameid(::PROTOBUF_NAMESPACE_ID::int32 value);
   public:
 
+  // uint32 seed = 4;
+  void clear_seed();
+  ::PROTOBUF_NAMESPACE_ID::uint32 seed() const;
+  void set_seed(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::uint32 _internal_seed() const;
+  void _internal_set_seed(::PROTOBUF_NAMESPACE_ID::uint32 value);
+  public:
+
   // @@protoc_insertion_point(class_scope:game.OrderInfo)
  private:
   class _Internal;
@@ -781,6 +791,7 @@ class OrderInfo :
   ::PROTOBUF_NAMESPACE_ID::int32 id_;
   ::PROTOBUF_NAMESPACE_ID::int32 numberofplayers_;
   ::PROTOBUF_NAMESPACE_ID::int32 gameid_;
+  ::PROTOBUF_NAMESPACE_ID::uint32 seed_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_game_2eproto;
 };
@@ -1272,6 +1283,7 @@ class Card :
 
   enum : int {
     kCardTypeFieldNumber = 1,
+    kExtraDataFieldNumber = 2,
   };
   // int32 cardType = 1;
   void clear_cardtype();
@@ -1282,12 +1294,22 @@ class Card :
   void _internal_set_cardtype(::PROTOBUF_NAMESPACE_ID::int32 value);
   public:
 
+  // int32 extraData = 2;
+  void clear_extradata();
+  ::PROTOBUF_NAMESPACE_ID::int32 extradata() const;
+  void set_extradata(::PROTOBUF_NAMESPACE_ID::int32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::int32 _internal_extradata() const;
+  void _internal_set_extradata(::PROTOBUF_NAMESPACE_ID::int32 value);
+  public:
+
   // @@protoc_insertion_point(class_scope:game.Card)
  private:
   class _Internal;
 
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
   ::PROTOBUF_NAMESPACE_ID::int32 cardtype_;
+  ::PROTOBUF_NAMESPACE_ID::int32 extradata_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_game_2eproto;
 };
@@ -1399,15 +1421,35 @@ class Dice :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kNumberFieldNumber = 1,
+    kNumber1FieldNumber = 1,
+    kNumber2FieldNumber = 2,
+    kHexNumberFieldNumber = 3,
   };
-  // int32 number = 1;
-  void clear_number();
-  ::PROTOBUF_NAMESPACE_ID::int32 number() const;
-  void set_number(::PROTOBUF_NAMESPACE_ID::int32 value);
+  // int32 number1 = 1;
+  void clear_number1();
+  ::PROTOBUF_NAMESPACE_ID::int32 number1() const;
+  void set_number1(::PROTOBUF_NAMESPACE_ID::int32 value);
   private:
-  ::PROTOBUF_NAMESPACE_ID::int32 _internal_number() const;
-  void _internal_set_number(::PROTOBUF_NAMESPACE_ID::int32 value);
+  ::PROTOBUF_NAMESPACE_ID::int32 _internal_number1() const;
+  void _internal_set_number1(::PROTOBUF_NAMESPACE_ID::int32 value);
+  public:
+
+  // int32 number2 = 2;
+  void clear_number2();
+  ::PROTOBUF_NAMESPACE_ID::int32 number2() const;
+  void set_number2(::PROTOBUF_NAMESPACE_ID::int32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::int32 _internal_number2() const;
+  void _internal_set_number2(::PROTOBUF_NAMESPACE_ID::int32 value);
+  public:
+
+  // int32 hexNumber = 3;
+  void clear_hexnumber();
+  ::PROTOBUF_NAMESPACE_ID::int32 hexnumber() const;
+  void set_hexnumber(::PROTOBUF_NAMESPACE_ID::int32 value);
+  private:
+  ::PROTOBUF_NAMESPACE_ID::int32 _internal_hexnumber() const;
+  void _internal_set_hexnumber(::PROTOBUF_NAMESPACE_ID::int32 value);
   public:
 
   // @@protoc_insertion_point(class_scope:game.Dice)
@@ -1415,7 +1457,9 @@ class Dice :
   class _Internal;
 
   ::PROTOBUF_NAMESPACE_ID::internal::InternalMetadataWithArena _internal_metadata_;
-  ::PROTOBUF_NAMESPACE_ID::int32 number_;
+  ::PROTOBUF_NAMESPACE_ID::int32 number1_;
+  ::PROTOBUF_NAMESPACE_ID::int32 number2_;
+  ::PROTOBUF_NAMESPACE_ID::int32 hexnumber_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_game_2eproto;
 };
@@ -1855,6 +1899,26 @@ inline void OrderInfo::set_gameid(::PROTOBUF_NAMESPACE_ID::int32 value) {
   // @@protoc_insertion_point(field_set:game.OrderInfo.gameId)
 }
 
+// uint32 seed = 4;
+inline void OrderInfo::clear_seed() {
+  seed_ = 0u;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 OrderInfo::_internal_seed() const {
+  return seed_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::uint32 OrderInfo::seed() const {
+  // @@protoc_insertion_point(field_get:game.OrderInfo.seed)
+  return _internal_seed();
+}
+inline void OrderInfo::_internal_set_seed(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  
+  seed_ = value;
+}
+inline void OrderInfo::set_seed(::PROTOBUF_NAMESPACE_ID::uint32 value) {
+  _internal_set_seed(value);
+  // @@protoc_insertion_point(field_set:game.OrderInfo.seed)
+}
+
 // -------------------------------------------------------------------
 
 // Player
@@ -2196,28 +2260,88 @@ inline void Card::set_cardtype(::PROTOBUF_NAMESPACE_ID::int32 value) {
   // @@protoc_insertion_point(field_set:game.Card.cardType)
 }
 
+// int32 extraData = 2;
+inline void Card::clear_extradata() {
+  extradata_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 Card::_internal_extradata() const {
+  return extradata_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 Card::extradata() const {
+  // @@protoc_insertion_point(field_get:game.Card.extraData)
+  return _internal_extradata();
+}
+inline void Card::_internal_set_extradata(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  extradata_ = value;
+}
+inline void Card::set_extradata(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  _internal_set_extradata(value);
+  // @@protoc_insertion_point(field_set:game.Card.extraData)
+}
+
 // -------------------------------------------------------------------
 
 // Dice
 
-// int32 number = 1;
-inline void Dice::clear_number() {
-  number_ = 0;
+// int32 number1 = 1;
+inline void Dice::clear_number1() {
+  number1_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Dice::_internal_number() const {
-  return number_;
+inline ::PROTOBUF_NAMESPACE_ID::int32 Dice::_internal_number1() const {
+  return number1_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::int32 Dice::number() const {
-  // @@protoc_insertion_point(field_get:game.Dice.number)
-  return _internal_number();
+inline ::PROTOBUF_NAMESPACE_ID::int32 Dice::number1() const {
+  // @@protoc_insertion_point(field_get:game.Dice.number1)
+  return _internal_number1();
 }
-inline void Dice::_internal_set_number(::PROTOBUF_NAMESPACE_ID::int32 value) {
+inline void Dice::_internal_set_number1(::PROTOBUF_NAMESPACE_ID::int32 value) {
   
-  number_ = value;
+  number1_ = value;
 }
-inline void Dice::set_number(::PROTOBUF_NAMESPACE_ID::int32 value) {
-  _internal_set_number(value);
-  // @@protoc_insertion_point(field_set:game.Dice.number)
+inline void Dice::set_number1(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  _internal_set_number1(value);
+  // @@protoc_insertion_point(field_set:game.Dice.number1)
+}
+
+// int32 number2 = 2;
+inline void Dice::clear_number2() {
+  number2_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 Dice::_internal_number2() const {
+  return number2_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 Dice::number2() const {
+  // @@protoc_insertion_point(field_get:game.Dice.number2)
+  return _internal_number2();
+}
+inline void Dice::_internal_set_number2(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  number2_ = value;
+}
+inline void Dice::set_number2(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  _internal_set_number2(value);
+  // @@protoc_insertion_point(field_set:game.Dice.number2)
+}
+
+// int32 hexNumber = 3;
+inline void Dice::clear_hexnumber() {
+  hexnumber_ = 0;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 Dice::_internal_hexnumber() const {
+  return hexnumber_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::int32 Dice::hexnumber() const {
+  // @@protoc_insertion_point(field_get:game.Dice.hexNumber)
+  return _internal_hexnumber();
+}
+inline void Dice::_internal_set_hexnumber(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  
+  hexnumber_ = value;
+}
+inline void Dice::set_hexnumber(::PROTOBUF_NAMESPACE_ID::int32 value) {
+  _internal_set_hexnumber(value);
+  // @@protoc_insertion_point(field_set:game.Dice.hexNumber)
 }
 
 // -------------------------------------------------------------------

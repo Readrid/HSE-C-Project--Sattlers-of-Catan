@@ -9,7 +9,6 @@
 namespace Board {
 
 constexpr int TERRITORIESNUM = 5;
-constexpr int VERTEXNUM = 54;
 constexpr int FIELDHEIGHT = 11;
 constexpr int FIELDWIDTH = 21;
 constexpr int HEXESNUM = 19;
@@ -115,7 +114,6 @@ public:
     int getVictoryPoints() const;
     int getKnightsNum() const;
     int getResourceNum(Resource re) const;
-    int getDevCardNum(DevelopmentCard dev_card) const;
     auto& getResources() const;
     auto& getDevCards() const;
 
@@ -135,43 +133,30 @@ public:
 
     void settle(BuildingType s, int x, int y);
     void giveResources(int cubes_num);
-    void setRobbers(int hex_num);
+    Resource setRobbers(int hex_num);
 
-    //возвращает true, если торговля прошла успешно, false, если не хватило ресурсов на обмен
     bool trade(Resource re_for_trade, Resource need_re);
-    //TODO: доработать логику торговли с другими игроками, сейчас пока сыро
-    void tradeWith(PlayerNum customerID, Resource re_for_trade, int tradeReNum, Resource need_re, int needReNum);
 
-
-    //возвращает true или false аналогично торговле
-    bool buildDevCard();
+    DevelopmentCard buildDevCard();
     void playDevCard(DevelopmentCard card, int extraData);
 
     bool canBuild(BuildingType mod, int x, int y) const;
     bool checkCards(BuildingType building);
 
     int getPlayerResNum(PlayerNum playerID, Resource re) const;
-    int getPlayerDevCardNum(PlayerNum playerID, DevelopmentCard devCard) const;
     const std::unordered_map<Resource, int>& getPlayerResources(PlayerNum playerID) const;
     const std::unordered_map<DevelopmentCard, int>& getPlayerDevCards(PlayerNum playerID) const;
     std::vector<int> getVictoryPoints() const;
     const std::unique_ptr<Cell>& getFieldCell(int x, int y) const;
     const std::unique_ptr<Hexagon>& getHex(int indx) const;
-    PlayerNum getCurPlayer() const;
     int getRobbersIndx() const;
 
     void changeCurPlayer(PlayerNum new_player);
-    void nextPlayer();
 
     int getRoadsRecord() const;
     PlayerNum getRoadsRecordHolder() const;
-    int getKnightRecord() const;
-    PlayerNum getKnightRecordHolder() const;
-    void setRoadsRecord(int new_record);
-    void setKnightRecord(int new_record);
 
     void gotoNextGamePhase();
-    bool isBeginning() const;
     bool isFinished();
 
 private:
@@ -188,16 +173,18 @@ private:
     PlayerNum last_knights_record_holder = PlayerNum::NONE;
     int knights_record = 2;
 
-    //TODO: static_cast<enum class> VS vector<enum class>
     std::vector<PlayerNum> playersIDs = {
             PlayerNum::NONE, PlayerNum::GAMER1,
             PlayerNum::GAMER2, PlayerNum::GAMER3,
             PlayerNum::GAMER4
     };
 
+    void setKnightRecord(int new_record);
+
     int findRoadsRecord(const std::unique_ptr<Cell>& v);
+    void setRoadsRecord(int new_record);
     void updateRoadsRecord();
-    const std::unique_ptr<Cell>& getStart(const std::unique_ptr<Cell>& v, int x, int y);
+    const std::unique_ptr<Cell>& getStart(const std::unique_ptr<Cell>& v, int x, int y, int dir);
     void clearMarks();
 
     utility::Random& random;

@@ -5,6 +5,7 @@
 #include <mutex>
 #include <set>
 #include <queue>
+#include <random>
 
 #include <grpc/grpc.h>
 #include <grpcpp/server.h>
@@ -54,7 +55,8 @@ struct Game {
 
 
     std::vector<utility::EventQueue> events_;
-    int numberOfPlayers = 0;
+    std::atomic_int numberOfPlayers = 0;
+    uint32_t seed = 0;
     std::atomic_int activePlayers { 0 };
     utility::spinlock spin;
 };
@@ -63,7 +65,7 @@ struct Game {
 
 class GameServerImpl final : public Network::Service {
 public:
-    GameServerImpl() : games(MaximumNumberOfGames) {
+    GameServerImpl() : games(MaximumNumberOfGames), random(std::random_device()()) {
         for (int k = 0; k < MaximumNumberOfGames; ++k) {
             availableIds.insert(k);
         }
@@ -78,7 +80,7 @@ private:
         if (numberOfMadeGames >= 90) {
             numberOfMadeGames = 0;
             for (int k = 0; k < MaximumNumberOfGames; ++k) {
-                if (games[k].activePlayers.load() == 0) {
+                if (games[k].activePlayers.load() < games[k].numberOfPlayers.load()) {
                     games[k].restart();
                     availableIds.insert(k);
                 }
@@ -90,10 +92,12 @@ private:
 
         games[newid].activePlayers.store(1);
         std::cout << "New game active: " << games[newid].activePlayers.load() << ' ' << games[newid].activePlayers.load() << std::endl;
-        games[newid].numberOfPlayers = request->numberofplayers();
+        games[newid].numberOfPlayers.store(request->numberofplayers());
+        games[newid].seed = random();
 
         response->set_numberofplayers(request->numberofplayers());
         response->set_id(0);
+        response->set_seed(games[newid].seed);
         std::cout << "ID " << newid << std::endl;
         response->set_gameid(newid);
 
@@ -106,7 +110,7 @@ private:
         std::lock_guard<utility::spinlock> lock(game.spin);
 
 
-        if (game.activePlayers.load() == game.numberOfPlayers || game.activePlayers.load() == 0) {
+        if (game.activePlayers.load() == game.numberOfPlayers.load() || game.activePlayers.load() == 0) {
             std::cout << "Bad join" << std::endl;
             return Status::CANCELLED;
         }
@@ -114,7 +118,8 @@ private:
 
         response->set_id(game.activePlayers++);
         response->set_gameid(request->gameid());
-        response->set_numberofplayers(game.numberOfPlayers);
+        response->set_numberofplayers(game.numberOfPlayers.load());
+        response->set_seed(game.seed);
 
         return Status::OK;
     }
@@ -178,6 +183,8 @@ private:
     utility::spinlock spin;
     std::set<int> availableIds;
     int numberOfMadeGames = 0;
+
+    std::mt19937 random;
 };
 
  
