@@ -377,7 +377,6 @@ void GameController::RunGame() {
          return;
      }
 
-
     gameModel_.gotoNextGamePhase();
     bool quit = false;
     while (!quit) {
